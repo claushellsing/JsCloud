@@ -1,5 +1,5 @@
 {
-  "name": "jscloud",
+  "name": "js-word-cloud",
   "homepage": "https://github.com/claushellsing/JsCloud",
   "version": "0.0.1",
   "description": "jscloud is an modern implementation of jQCloud, without jQuery dependency",

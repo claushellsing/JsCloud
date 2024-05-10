@@ -1,18 +1,43 @@
-# jQCloud
+# jsCloud
 
-[![Bower version](https://img.shields.io/bower/v/jqcloud2.svg?style=flat-square)](http://mistic100.github.io/jQCloud)
-[![NPM version](https://img.shields.io/npm/v/jqcloud2.svg?style=flat-square)](https://www.npmjs.com/package/jqcloud2)
+JsCould is a fork of the [jQCloud](http://mistic100.github.io/jQCloud) library that removes the use of Jquery but instead use Typescript.
 
-> ## _Long Term Support_ : I will not develop any more features for this library but contributions are more than welcomed and I will be happy to merge and publish new versions.
+## Install
 
-## Beautiful word clouds with jQuery
+```bash
+npm install js-word-cloud
+```
 
-jQCloud is a jQuery plugin that builds neat and pure HTML + CSS word clouds and tag clouds that are actually shaped like a cloud (otherwise, why would we call them 'word clouds'?).
+## Usage
 
-Also available as [AngularJS directive](https://github.com/mistic100/angular-jqcloud)
+Include the css file in your html file:
+
+```html
+<link rel="stylesheet" type="text/css" href="node_modules/js-word-cloud/dist/jqcloud.css">
+```
+
+Import the library in your javascript file:
+
+```javascript
+import jscloud from 'js-word-cloud';
+
+jscloud(document.getElementById('wc'), [
+    { text: 'Lorem', weight: 13 },
+    { text: 'Ipsum', weight: 10.5 },
+    { text: 'Dolor', weight: 9.4 },
+    { text: 'Sit', weight: 8 },
+    { text: 'Amet', weight: 6.2 },
+    { text: 'Consectetur', weight: 5 },
+    { text: 'Adipiscing', weight: 5 },
+], {
+    width: 500,
+    height: 350,
+});
+```
 
 ## Documentation
 
+For proper documentation, please refer to the original [jQCloud](http://mistic100.github.io/jQCloud) documentation.
 http://mistic100.github.io/jQCloud
 
 ## License
