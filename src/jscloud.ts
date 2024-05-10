@@ -1,53 +1,11 @@
-/*!
- * jQCloud 2.0.3
- * Copyright 2011 Luca Ongaro (http://www.lucaongaro.eu)
- * Copyright 2013 Daniel White (http://www.developerdan.com)
- * Copyright 2014-2017 Damien "Mistic" Sorel (http://www.strangeplanet.fr)
- * Licensed under MIT (http://opensource.org/licenses/MIT)
- */
-(function(root, factory) {
-    if (typeof define === 'function' && define.amd) {
-        define(['jquery'], factory);
-    }
-    else if (typeof module === 'object' && module.exports) {
-        module.exports = factory(require('jquery'));
-    }
-    else {
-        factory(root.jQuery);
-    }
-}(this, function($) {
-'use strict';
+import $ from 'cash-dom';
+import delay from 'lodash/delay';
 
-/*
- * Plugin class
- */
-var jQCloud = function(element, word_array, options) {
-    this.$element = $(element);
+const proxy = function (fn, context) {
+    return fn.bind(context);
+}
 
-    this.word_array = word_array || [];
-    this.options = options;
-
-    this.sizeGenerator = null;
-    this.colorGenerator = null;
-
-    // Data used internally
-    this.data = {
-        placed_words: [],
-        timeouts: {},
-        namespace: null,
-        step: null,
-        angle: null,
-        aspect_ratio: null,
-        max_weight: null,
-        min_weight: null,
-        sizes: [],
-        colors: []
-    };
-
-    this.initialize();
-};
-
-jQCloud.DEFAULTS = {
+const defaults = {
     width: 100,
     height: 100,
     center: { x: 0.5, y: 0.5 },
@@ -64,8 +22,42 @@ jQCloud.DEFAULTS = {
     template: null
 };
 
-jQCloud.prototype = {
-    initialize: function() {
+class jSCloud {
+    $element;
+    options;
+    word_array;
+    data;
+    sizeGenerator;
+    colorGenerator;
+
+    constructor (element, word_array, options = {}) {
+        this.$element = $(element);
+
+        this.word_array = word_array || [];
+
+        this.sizeGenerator = null;
+        this.colorGenerator = null;
+
+        // Data used internally
+        this.data = {
+            placed_words: [],
+            timeouts: {},
+            namespace: null,
+            step: null,
+            angle: null,
+            aspect_ratio: null,
+            max_weight: null,
+            min_weight: null,
+            sizes: [],
+            colors: []
+        };
+
+        this.options = $.extend(true, defaults, options);
+
+        this.initialize();
+    }
+
+    initialize() {
         // Set/Get dimensions
         if (this.options.width) {
             this.$element.width(this.options.width);
@@ -81,7 +73,7 @@ jQCloud.prototype = {
         }
 
         // Default options value
-        this.options = $.extend(true, {}, jQCloud.DEFAULTS, this.options);
+        this.options = $.extend(true, {}, defaults, this.options);
 
         // Ensure delay
         if (this.options.delay === null) {
@@ -101,11 +93,11 @@ jQCloud.prototype = {
         }
         // Array of sizes
         else if ($.isArray(this.options.colors)) {
-            var cl = this.options.colors.length;
+            const cl = this.options.colors.length;
             if (cl > 0) {
                 // Fill the sizes array to X items
                 if (cl < this.options.steps) {
-                    for (var i = cl; i < this.options.steps; i++) {
+                    for (let i = cl; i < this.options.steps; i++) {
                         this.options.colors[i] = this.options.colors[cl - 1];
                     }
                 }
@@ -124,14 +116,14 @@ jQCloud.prototype = {
         // Object with 'from' and 'to'
         else if ($.isPlainObject(this.options.fontSize)) {
             this.sizeGenerator = function(width, height, weight) {
-                var max = width * this.options.fontSize.from,
-                    min = width * this.options.fontSize.to;
+                const max = width * this.options.fontSize.from;
+                const min = width * this.options.fontSize.to;
                 return Math.round(min + (max - min) * 1.0 / (this.options.steps - 1) * (weight - 1)) + 'px';
             };
         }
         // Array of sizes
         else if ($.isArray(this.options.fontSize)) {
-            var sl = this.options.fontSize.length;
+            const sl = this.options.fontSize.length;
             if (sl > 0) {
                 // Fill the sizes array to X items
                 if (sl < this.options.steps) {
@@ -154,7 +146,7 @@ jQCloud.prototype = {
         // Namespace word ids to avoid collisions between multiple clouds
         this.data.namespace = (this.$element.attr('id') || Math.floor((Math.random() * 1000000)).toString(36)) + '_word_';
 
-        this.$element.addClass('jqcloud');
+        this.$element.addClass('jscloud');
 
         // Container's CSS position cannot be 'static'
         if (this.$element.css('position') === 'static') {
@@ -162,55 +154,57 @@ jQCloud.prototype = {
         }
 
         // Delay execution so that the browser can render the page before the computatively intensive word cloud drawing
-        this.createTimeout($.proxy(this.drawWordCloud, this), 10);
+        this.createTimeout(proxy(this.drawWordCloud, this), 10);
+
 
         // Attach window resize event
         if (this.options.autoResize) {
             $(window).on('resize.' + this.data.namespace, throttle(this.resize, 50, this));
         }
-    },
+    }
 
     // Helper function to keep track of timeouts so they can be destroyed
-    createTimeout: function(callback, time) {
-        var timeout = setTimeout($.proxy(function() {
-            delete this.data.timeouts[timeout];
+    createTimeout(callback, time) {
+        const timeoutId = delay(proxy(() => {
+            delete this.data.timeouts[timeoutId];
             callback();
         }, this), time);
-        this.data.timeouts[timeout] = true;
-    },
+
+        this.data.timeouts[timeoutId] = true;
+    }
 
     // Destroy all timeouts
-    clearTimeouts: function() {
+    clearTimeouts() {
         $.each(this.data.timeouts, function(key) {
             clearTimeout(key);
         });
         this.data.timeouts = {};
-    },
+    }
 
     // Pairwise overlap detection
-    overlapping: function(a, b) {
+    overlapping(a, b) {
         if (Math.abs(2.0 * a.left + a.width - 2.0 * b.left - b.width) < a.width + b.width) {
             if (Math.abs(2.0 * a.top + a.height - 2.0 * b.top - b.height) < a.height + b.height) {
                 return true;
             }
         }
         return false;
-    },
+    }
 
     // Helper function to test if an element overlaps others
-    hitTest: function(elem) {
+    hitTest(elem) {
         // Check elements for overlap one by one, stop and return false as soon as an overlap is found
-        for (var i = 0, l = this.data.placed_words.length; i < l; i++) {
+        for (let i = 0, l = this.data.placed_words.length; i < l; i++) {
             if (this.overlapping(elem, this.data.placed_words[i])) {
                 return true;
             }
         }
         return false;
-    },
+    }
 
     // Initialize the drawing of the whole cloud
-    drawWordCloud: function() {
-        var i, l;
+    drawWordCloud() {
+        let i, l;
 
         this.$element.children('[id^="' + this.data.namespace + '"]').remove();
 
@@ -220,7 +214,7 @@ jQCloud.prototype = {
 
         // Make sure every weight is a number before sorting
         for (i = 0, l = this.word_array.length; i < l; i++) {
-            this.word_array[i].weight = parseFloat(this.word_array[i].weight, 10);
+            this.word_array[i].weight = parseFloat(this.word_array[i].weight);
         }
 
         // Sort word_array from the word with the highest weight to the one with the lowest
@@ -261,25 +255,25 @@ jQCloud.prototype = {
                 this.options.afterCloudRender.call(this.$element);
             }
         }
-    },
+    }
 
     // Function to draw a word, by moving it in spiral until it finds a suitable empty place
-    drawOneWord: function(index, word) {
-        var word_id = this.data.namespace + index,
-            word_selector = '#' + word_id,
+    drawOneWord(index, word) {
+        const word_id = this.data.namespace + index;
+        const word_selector = '#' + word_id;
 
         // option.shape == 'elliptic'
-            angle = this.data.angle,
-            radius = 0.0,
+        let angle = this.data.angle;
+        let radius = 0.0;
 
         // option.shape == 'rectangular'
-            steps_in_direction = 0.0,
-            quarter_turns = 0.0,
+        let steps_in_direction = 0.0;
+        let quarter_turns = 0.0;
 
-            weight = Math.floor(this.options.steps / 2),
-            word_span,
-            word_size,
-            word_style;
+        let weight = Math.floor(this.options.steps / 2);
+        let word_span;
+        let word_size;
+        let word_style;
 
         // Create word attr object
         word.attr = $.extend({}, word.html, { id: word_id });
@@ -291,7 +285,7 @@ jQCloud.prototype = {
         }
         word_span = $('<span>').attr(word.attr);
 
-        word_span.addClass('jqcloud-word');
+        word_span.addClass('jscloud-word');
 
         // Apply class
         if (this.options.classPattern) {
@@ -327,7 +321,10 @@ jQCloud.prototype = {
                 word.link.href = encodeURI(word.link.href).replace(/'/g, '%27');
             }
 
-            word_span.append($('<a>').attr(word.link).text(word.text));
+            const word_el = $('<a>');
+            word_el.attr(word.link);
+            word_el.text(word.text);
+            word_span.append(word_el);
         }
         else {
             word_span.text(word.text);
@@ -407,15 +404,13 @@ jQCloud.prototype = {
         if (typeof word.afterWordRender === 'function') {
             word.afterWordRender.call(word_span);
         }
-    },
+    }
 
     // Draw one word then recall the function after a delay
-    drawOneWordDelayed: function(index) {
-        index = index || 0;
-
+    drawOneWordDelayed(index = 0) {
         // if not visible then do not attempt to draw
         if (!this.$element.is(':visible')) {
-            this.createTimeout($.proxy(function() {
+            this.createTimeout(proxy(function() {
                 this.drawOneWordDelayed(index);
             }, this), 10);
 
@@ -425,7 +420,7 @@ jQCloud.prototype = {
         if (index < this.word_array.length) {
             this.drawOneWord(index, this.word_array[index]);
 
-            this.createTimeout($.proxy(function() {
+            this.createTimeout(proxy(function() {
                 this.drawOneWordDelayed(index + 1);
             }, this), this.options.delay);
         }
@@ -434,31 +429,31 @@ jQCloud.prototype = {
                 this.options.afterCloudRender.call(this.$element);
             }
         }
-    },
+    }
 
     // Destroy any data and objects added by the plugin
-    destroy: function() {
+    destroy() {
         if (this.options.autoResize) {
             $(window).off('resize.' + this.data.namespace);
         }
 
         this.clearTimeouts();
-        this.$element.removeClass('jqcloud');
-        this.$element.removeData('jqcloud');
+        this.$element.removeClass('jscloud');
+        this.$element.removeData('jscloud');
         this.$element.children('[id^="' + this.data.namespace + '"]').remove();
-    },
+    }
 
     // Update the list of words
-    update: function(word_array) {
+    update(word_array) {
         this.word_array = word_array;
         this.data.placed_words = [];
 
         this.clearTimeouts();
         this.drawWordCloud();
-    },
+    }
 
-    resize: function() {
-        var new_size = {
+    resize() {
+        const new_size = {
             width: this.$element.width(),
             height: this.$element.height()
         };
@@ -470,8 +465,8 @@ jQCloud.prototype = {
 
             this.update(this.word_array);
         }
-    },
-};
+    }
+}
 
 /*
  * Apply throttling to a callback
@@ -481,13 +476,13 @@ jQCloud.prototype = {
  * @return {function}
  */
 function throttle(callback, delay, context) {
-    var state = {
+    const state = {
         pid: null,
         last: 0
     };
 
     return function() {
-        var elapsed = new Date().getTime() - state.last,
+        const elapsed = new Date().getTime() - state.last,
             args = arguments,
             that = this;
 
@@ -506,41 +501,8 @@ function throttle(callback, delay, context) {
     };
 }
 
-/*
- * jQuery plugin
- */
-$.fn.jQCloud = function(word_array, option) {
-    var args = arguments;
+function jscloud (element, word_array, options = {}) {
+    return new jSCloud(element, word_array, options);
+}
 
-    return this.each(function() {
-        var $this = $(this),
-            data = $this.data('jqcloud');
-
-        if (!data && word_array === 'destroy') {
-            // Don't even try to initialize when called with 'destroy'
-            return;
-        }
-        if (!data) {
-            var options = typeof option === 'object' ? option : {};
-            $this.data('jqcloud', (data = new jQCloud(this, word_array, options)));
-        }
-        else if (typeof word_array === 'string') {
-            data[word_array].apply(data, Array.prototype.slice.call(args, 1));
-        }
-    });
-};
-
-$.fn.jQCloud.defaults = {
-    set: function(options) {
-        $.extend(true, jQCloud.DEFAULTS, options);
-    },
-    get: function(key) {
-        var options = jQCloud.DEFAULTS;
-        if (key) {
-            options = options[key];
-        }
-        return $.extend(true, {}, options);
-    }
-};
-
-}));
+export default jscloud;
